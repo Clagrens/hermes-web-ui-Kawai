@@ -435,12 +435,30 @@ function formatTime(ts: number) {
 
 // ─── Lifecycle ──────────────────────────────────────────────────
 
-let hasConnected = false;
+function resetTerminalState() {
+  // 清除残存的会话数据，准备重新连接
+  for (const entry of termMap.values()) {
+    entry.term.dispose();
+  }
+  termMap.clear();
+  sessions.value = [];
+  activeSessionId.value = null;
+  activeTerm = null;
+  activeFitAddon = null;
+  connectionError.value = null;
+}
 
 watch(() => props.visible, (visible) => {
-  if (visible && !hasConnected && !ws) {
-    hasConnected = true;
-    connect();
+  if (visible) {
+    const wsOpen = ws?.readyState === WebSocket.OPEN;
+    if (!wsOpen) {
+      if (ws) {
+        // WebSocket 已关闭但引用还在，先重置
+        ws = null;
+      }
+      resetTerminalState();
+      connect();
+    }
   }
 }, { immediate: true });
 
